@@ -1,4 +1,4 @@
-/* Design: ورشة الإشارة — Swiss editorial software, charcoal field, ivory workbench, moss signal #9DBB8A. */
+/* Design: modern ambient NFF workspace — Google/Samsung-inspired components, soft merged palette, light depth, RTL-first clarity. */
 import { useMemo, useRef, useState } from "react";
 import { FileCode2, FolderOpen, Hash, Layers3, ScanLine, ShieldCheck, Upload, X } from "lucide-react";
 import { generateAim, generateHm, inspectHeader, parseNff } from "../core";
