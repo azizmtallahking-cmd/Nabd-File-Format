@@ -131,7 +131,7 @@ export default function Home() {
 
   return <main className="nff-shell">
     <aside className="nff-rail">
-      <div className="brand-lockup"><div className="brand-symbol">N</div><div><strong>Nabd File Format</strong><small>تنظيم المحتوى ببساطة</small></div></div>
+      <div className="brand-lockup"><div className="brand-symbol" aria-label="NFF"><span /><span /><span /><span /><span /><span /></div><div><strong>Nabd File Format</strong><small>تنظيم المحتوى ببساطة</small></div></div>
       <nav className="rail-nav" aria-label="الغرف">
         <button className={`rail-item ${room === "files" ? "active" : ""}`} onClick={() => changeRoom("files")}><FolderOpen size={18} /><span>الملفات</span><b>01</b></button>
         <button className={`rail-item ${room === "convert" ? "active" : ""}`} onClick={() => changeRoom("convert")}><Layers3 size={18} /><span>تحويل ملف</span><b>02</b></button>
@@ -141,15 +141,15 @@ export default function Home() {
     </aside>
 
     <section className="nff-main">
-      <header className="topline"><div><span className="eyebrow">NABD FILE FORMAT</span><h1>Nabd File Format</h1><p>مساحة بسيطة لإنشاء ملفاتك وتنظيمها وتحويلها</p></div><div className="top-actions"><span className="local-pill"><span className="pulse-dot" /> محلي</span><button className="icon-button" aria-label="تعليمات المراجعة" onClick={() => setNotice({ tone: "neutral", text: "راجع النتيجة قبل أي تنزيل أو حفظ." })}><Check size={18} /></button></div></header>
+      <header className="topline"><div><span className="eyebrow">NFF / FILE SYSTEM</span><h1>Nabd File Format</h1><p>افتح ملفك، افحصه، واحتفظ بنسخة واضحة منه.</p></div><div className="top-actions"><span className="local-pill"><span className="pulse-dot" /> محلي</span><button className="icon-button" aria-label="تعليمات المراجعة" onClick={() => setNotice({ tone: "neutral", text: "راجع النتيجة قبل أي تنزيل أو حفظ." })}><Check size={18} /></button></div></header>
 
-      {room === "files" && <section className="room-view">
-        <div className="view-heading"><div><span className="room-overline">مساحتك</span><h2>ملفاتك</h2><p>افتح ملفاً أو أنشئ ملفاً جديداً بالطريقة التي تناسبك.</p></div><button className="primary-button" onClick={() => setShowNew(true)}><FilePlus2 size={17} /> ملف جديد</button></div>
+      {room === "files" && <section className="room-view files-room">
+        <div className="view-heading"><div><span className="room-overline">FILE DESK</span><h2>ملفاتك</h2><p>كل ملف يبدأ من هنا: افتح، راجع، ثم قرر ما تريد فعله به.</p></div><button className="primary-button" onClick={() => setShowNew(true)}><FilePlus2 size={17} /> ملف جديد</button></div>
         {notice && <Notice notice={notice} onClose={() => setNotice(null)} />}
         <div className="quick-grid">
-          <button className="quick-card primary-quick" onClick={() => inputRef.current?.click()}><span className="quick-icon"><Upload size={21} /></span><div><strong>رفع ملف</strong><small>NFF أو نص جاهز من جهازك</small></div><ChevronLeft size={18} /></button>
-          <button className="quick-card" onClick={() => { setFileName("مسودة جديدة"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setNotice(null); }}><span className="quick-icon mint"><FilePlus2 size={21} /></span><div><strong>إنشاء ملف HM</strong><small>اكتب المحتوى ثم راجعه قبل الحفظ</small></div><ChevronLeft size={18} /></button>
-          <button className="quick-card" onClick={() => changeRoom("convert")}><span className="quick-icon coral"><WandSparkles size={21} /></span><div><strong>تحويل مصدر</strong><small>حوّل نصاً أو مستنداً إلى NFF</small></div><ChevronLeft size={18} /></button>
+          <button className="quick-card primary-quick" onClick={() => inputRef.current?.click()}><span className="quick-icon"><Upload size={21} /></span><div><strong>فتح ملف</strong><small>NFF أو ملف من جهازك</small></div><ChevronLeft size={18} /></button>
+          <button className="quick-card" onClick={() => { setFileName("مسودة جديدة"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setNotice(null); }}><span className="quick-icon mint"><FilePlus2 size={21} /></span><div><strong>إنشاء HM</strong><small>ابدأ بنسخة بشرية قابلة للمراجعة</small></div><ChevronLeft size={18} /></button>
+          <button className="quick-card" onClick={() => changeRoom("convert")}><span className="quick-icon coral"><WandSparkles size={21} /></span><div><strong>تحويل إلى NFF</strong><small>انقل PDF أو Word أو Excel إلى NFF</small></div><ChevronLeft size={18} /></button>
         </div>
         <input ref={inputRef} type="file" accept=".nff,.txt,.md,.pdf,.docx,.xlsx,.png,.jpg,.jpeg" className="browser-file-input" onChange={(event) => { const file = event.target.files?.[0]; if (file) void openFile(file); }} />
         <div className="editor-layout"><div className="editor-panel"><div className="panel-head"><div><strong>{fileName}</strong><small>{lineCount} أسطر · مسودة محلية</small></div><button className="outline-button" onClick={() => void generate()}><Check size={16} /> معاينة الملف</button></div><textarea value={content} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label="محتوى الملف" /><div className="editor-foot"><div className="mode-switch"><button className={mode === "HM" ? "selected" : ""} onClick={() => setMode("HM")}>HM</button><button className={mode === "AIM" ? "selected" : ""} onClick={() => setMode("AIM")}>AIM</button></div><span>لن يتم الحفظ أو التنزيل دون مراجعتك</span></div></div><div className="side-card ai-card"><div className="ai-badge"><Check size={16} /> جاهز للمراجعة</div><h3>مراجعة قبل التنزيل</h3><p>راجع النص والاتجاه والمود قبل إنشاء الملف أو تنزيله.</p><button className="soft-button" onClick={() => setNotice({ tone: "neutral", text: "المعاينة جاهزة؛ لا يتم الحفظ أو التنزيل تلقائياً." })}>فتح تعليمات المراجعة</button><div className="ai-note">لا تغيير للنص · موافقة صريحة قبل الاعتماد</div></div></div>
