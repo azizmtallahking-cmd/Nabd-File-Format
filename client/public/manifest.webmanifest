@@ -1,0 +1,21 @@
+{
+  "name": "Nabd File Format",
+  "short_name": "NFF",
+  "description": "Local-first file workspace for Nabd File Format",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#4d6fe1",
+  "icons": [
+    { "src": "/nff-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "file_handlers": [
+    {
+      "action": "/?open=nff",
+      "accept": { "application/x-nff": [".nff"], "application/octet-stream": [".nff"] }
+    }
+  ]
+}

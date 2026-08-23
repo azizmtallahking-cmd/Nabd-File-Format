@@ -25,6 +25,14 @@ const wrongVersion = hm.bytes.slice();
 wrongVersion[13] = 0x31;
 assert.equal(inspectHeader(wrongVersion).isValid, false);
 
+const wrongMagic = hm.bytes.slice();
+wrongMagic[0] ^= 0xff;
+assert.equal(inspectHeader(wrongMagic).isValid, false);
+
+const wrongMode = hm.bytes.slice();
+wrongMode[6] ^= 0xff;
+assert.equal(inspectHeader(wrongMode).isValid, false);
+
 const emptyBody = new Uint8Array(hm.bytes.subarray(0, 18));
 assert.equal(parseNff(emptyBody).bodyContent, "");
 
