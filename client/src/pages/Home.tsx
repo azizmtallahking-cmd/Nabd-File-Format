@@ -15,7 +15,7 @@ const CONVERT_SAMPLE = "# عنوان المستند\n\nاكتب أو ألصق ا
 function formatBytes(bytes: number) { return `${bytes.toLocaleString("ar-EG")} بايت`; }
 
 export default function Home() {
-  const [room, setRoom] = useState<Room>("files");
+  const [room, setRoom] = useState<Room | "draft">("files");
   const [showNew, setShowNew] = useState(false);
   const [content, setContent] = useState(STARTER_CONTENT);
   const [convertText, setConvertText] = useState(CONVERT_SAMPLE);
@@ -91,7 +91,8 @@ export default function Home() {
       setFileName(file.name);
       setResult({ bytes: bytes.length, tags: parsed.tags.length, nodes: parsed.nodes.length, title: parsed.frontmatter.title });
       setPreview(new TextDecoder().decode(bytes));
-      setNotice({ tone: "success", text: `تم فتح ${file.name}. راجع المحتوى قبل المتابعة.` });
+      setRoom("draft");
+      setNotice({ tone: "success", text: `تم فتح ${file.name}. المود مقفل على ${parsed.mode}.` });
       setShowNew(false);
     } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "هذا الملف غير صالح." }); }
   }
@@ -169,87 +170,80 @@ export default function Home() {
         <div className="view-heading"><div><span className="room-overline">FILE DESK</span><h2>ملفاتك</h2><p>كل ملف يبدأ من هنا: افتح، راجع، ثم قرر ما تريد فعله به.</p></div><button className="primary-button" onClick={() => setShowNew(true)}><FilePlus2 size={17} /> ملف جديد</button></div>
         {notice && <Notice notice={notice} onClose={() => setNotice(null)} />}
         <div className="quick-grid">
-          <button className={`quick-card ${creationPath === "open" ? "active" : ""}`} onClick={() => { setCreationPath("open"); inputRef.current?.click(); }}><span className="quick-icon"><Upload size={21} /></span><div><strong>فتح ملف</strong><small>NFF أو ملف من جهازك</small></div><ChevronLeft size={18} /></button>
-          <button className={`quick-card ${creationPath === "write" ? "active" : ""}`} onClick={() => { setCreationPath("write"); setFileName("مسودة جديدة"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setNotice(null); }}><span className="quick-icon mint"><FilePlus2 size={21} /></span><div><strong>إنشاء نص</strong><small>كتابة أو لصق نص (AIM/HM)</small></div><ChevronLeft size={18} /></button>
-          <button className={`quick-card ${creationPath === "design" ? "active" : ""}`} onClick={() => { setCreationPath("design"); setMode("HM"); setFileName("تصميم مخصص"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setNotice(null); }}><span className="quick-icon coral"><Layers3 size={21} /></span><div><strong>تخصيص HM</strong><small>نمط وألوان وترتيب مخصص</small></div><ChevronLeft size={18} /></button>
+          <button className="quick-card" onClick={() => { setCreationPath("open"); inputRef.current?.click(); }}><span className="quick-icon"><Upload size={21} /></span><div><strong>فتح ملف</strong><small>NFF أو ملف من جهازك</small></div><ChevronLeft size={18} /></button>
+          <button className="quick-card" onClick={() => { setCreationPath("write"); setFileName("مسودة جديدة"); setContent(STARTER_CONTENT); setMode("HM"); setResult(null); setPreview(null); setRoom("draft"); }}><span className="quick-icon mint"><FilePlus2 size={21} /></span><div><strong>إنشاء نص</strong><small>كتابة أو لصق نص (AIM/HM)</small></div><ChevronLeft size={18} /></button>
+          <button className="quick-card" onClick={() => { setCreationPath("design"); setMode("HM"); setFileName("تصميم مخصص"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setRoom("draft"); }}><span className="quick-icon coral"><Layers3 size={21} /></span><div><strong>تخصيص HM</strong><small>نمط وألوان وترتيب مخصص</small></div><ChevronLeft size={18} /></button>
         </div>
         <input ref={inputRef} type="file" accept=".nff,.txt,.md,.pdf,.docx,.xlsx,.png,.jpg,.jpeg" className="browser-file-input" onChange={(event) => { const file = event.target.files?.[0]; if (file) void openFile(file); }} />
-        <div className="editor-layout">
+      </section>}
+
+      {room === "draft" && <section className={`room-view draft-room ${mode === "AIM" ? "aim-mode" : "hm-mode"}`}>
+        <div className="view-heading">
+          <div>
+            <span className="room-overline">{mode} DRAFT</span>
+            <h2>{fileName}</h2>
+            <p>{mode === "HM" ? "مسودة بشرية قابلة للمراجعة والتخصيص." : "مسودة آلية مضغوطة مخصصة للذكاء."}</p>
+          </div>
+          <div className="view-actions">
+            <button className="outline-button" onClick={() => setRoom("files")}><ArrowRight size={16} /> العودة للملفات</button>
+            <button className="primary-button" onClick={download} disabled={!preview}><Check size={16} /> تنزيل {mode}</button>
+          </div>
+        </div>
+
+        {notice && <Notice notice={notice} onClose={() => setNotice(null)} />}
+
+        <div className="draft-layout">
           <div className="editor-panel">
             <div className="panel-head">
-              <div><strong>{fileName}</strong><small>{lineCount} أسطر · مسودة محلية</small></div>
-              <button className="outline-button" onClick={() => void generate()}><Check size={16} /> معاينة الملف</button>
+              <div><strong>المحتوى المصدر</strong><small>{lineCount} أسطر</small></div>
+              <div className="mode-badge">{mode} مقفل</div>
             </div>
             <textarea value={content} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label="محتوى الملف" />
             <div className="editor-foot">
-              <div className="mode-switch">
-                <button className={mode === "HM" ? "selected" : ""} onClick={() => setMode("HM")}>HM</button>
-                <button className={mode === "AIM" ? "selected" : ""} onClick={() => { setMode("AIM"); if (creationPath === "design") setCreationPath("write"); }}>AIM</button>
-              </div>
-              <span>لن يتم الحفظ أو التنزيل دون مراجعتك</span>
+              <button className="outline-button" onClick={() => void generate()}><WandSparkles size={16} /> تحديث المعاينة</button>
+              <span>التعديلات محلية بالكامل</span>
             </div>
           </div>
-          
-          {creationPath === "design" && mode === "HM" ? (
-            <div className="side-card design-card">
-              <div className="ai-badge"><Layers3 size={16} /> تخصيص بصري</div>
-              <h3>تنسيق HM مخصص</h3>
-              <div className="design-options">
-                <div className="option-group">
-                  <span>السمة</span>
-                  <div className="chips">
-                    <button className={customStyle.theme === "classic" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "classic" }))}>كلاسيك</button>
-                    <button className={customStyle.theme === "modern" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "modern" }))}>عصري</button>
-                    <button className={customStyle.theme === "glass" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "glass" }))}>زجاجي</button>
+
+          <div className="preview-side">
+            {creationPath === "design" && mode === "HM" && (
+              <div className="side-card design-card">
+                <div className="ai-badge"><Layers3 size={16} /> تخصيص بصري</div>
+                <h3>تنسيق HM مخصص</h3>
+                <div className="design-options">
+                  <div className="option-group">
+                    <span>السمة</span>
+                    <div className="chips">
+                      <button className={customStyle.theme === "classic" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "classic" }))}>كلاسيك</button>
+                      <button className={customStyle.theme === "modern" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "modern" }))}>عصري</button>
+                      <button className={customStyle.theme === "glass" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "glass" }))}>زجاجي</button>
+                    </div>
+                  </div>
+                  <div className="option-group">
+                    <span>اللون المميز</span>
+                    <div className="color-dots">
+                      <button className={`dot ink ${customStyle.accent === "ink" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "ink" }))} />
+                      <button className={`dot moss ${customStyle.accent === "moss" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "moss" }))} />
+                      <button className={`dot copper ${customStyle.accent === "copper" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "copper" }))} />
+                    </div>
                   </div>
                 </div>
-                <div className="option-group">
-                  <span>اللون المميز</span>
-                  <div className="color-dots">
-                    <button className={`dot ink ${customStyle.accent === "ink" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "ink" }))} />
-                    <button className={`dot moss ${customStyle.accent === "moss" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "moss" }))} />
-                    <button className={`dot copper ${customStyle.accent === "copper" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "copper" }))} />
-                  </div>
-                </div>
-              </div>
-              <button className="soft-button" onClick={() => void generate()}>تطبيق التنسيق</button>
-              <div className="ai-note">التخصيص بصري فقط · لا يغير نواة NFF</div>
-            </div>
-          ) : (
-            <div className="side-card ai-card">
-              <div className="ai-badge"><Check size={16} /> جاهز للمراجعة</div>
-              <h3>مراجعة قبل التنزيل</h3>
-              <p>راجع النص والاتجاه والمود قبل إنشاء الملف أو تنزيله.</p>
-              <button className="soft-button" onClick={() => setNotice({ tone: "neutral", text: "المعاينة جاهزة؛ لا يتم الحفظ أو التنزيل تلقائياً." })}>فتح تعليمات المراجعة</button>
-              <div className="ai-note">لا تغيير للنص · موافقة صريحة قبل الاعتماد</div>
-            </div>
-          )}
-        </div>
-        {preview && (
-          <div className="preview-container">
-            <div className="preview-card">
-              <div>
-                <strong>المعاينة جاهزة</strong>
-                <small>{result ? `${formatBytes(result.bytes)} · ${result.nodes} عناصر` : "راجع النسخة قبل التنزيل"}</small>
-              </div>
-              <button className="primary-button" onClick={download}>تنزيل الملف</button>
-            </div>
-            {mode === "HM" && (
-              <div className="nff-render-box">
-                <div className="render-head">معاينة العرض الدلالي (HM)</div>
-                <NffRenderer 
-                  nodes={parseNff(new TextEncoder().encode(preview)).nodes} 
-                />
+                <button className="soft-button" onClick={() => void generate()}>تطبيق التنسيق</button>
               </div>
             )}
-            {mode === "AIM" && (
-              <div className="nff-render-box aim-view">
-                <div className="render-head">معاينة الضغط الميكانيكي (AIM)</div>
+
+            <div className="nff-render-box">
+              <div className="render-head">معاينة {mode === "HM" ? "العرض الدلالي" : "الضغط الميكانيكي"}</div>
+              {!preview ? (
+                <div className="empty-preview">اضغط تحديث المعاينة لرؤية النتيجة</div>
+              ) : mode === "HM" ? (
+                <NffRenderer nodes={parseNff(new TextEncoder().encode(preview)).nodes} />
+              ) : (
                 <pre className="aim-text">{preview}</pre>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </section>}
 
       {room === "convert" && <section className="room-view simple-room"><div className="view-heading"><div><span className="room-overline">مختبر التحويل</span><h2>حوّل ملفاتك إلى NFF</h2><p>ارفع الملف، اختر المود، ثم راجع النتيجة قبل تنزيلها.</p></div><button className="outline-button" onClick={() => changeRoom("files")}><ArrowRight size={16} /> العودة إلى الملفات</button></div>{notice && <Notice notice={notice} onClose={() => setNotice(null)} />}<div className="upload-stage"><input ref={convertInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.nff" className="browser-file-input" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleConversionFile(file); }} /><button className="drop-card" onClick={() => convertInputRef.current?.click()}><span className="drop-icon"><Upload size={28} /></span><strong>{extracting ? progress || "جارٍ قراءة الملف" : uploaded ? uploaded.name : "اختر ملفاً من جهازك"}</strong><small>{extracting ? "المعالجة تتم محلياً" : uploaded ? `${uploaded.format.toUpperCase()} · ${Math.round(uploaded.size / 1024)} KB · جاهز للتحويل` : "PDF · Word · Excel · TXT · Markdown · صورة"}</small>{extracting && <span className="progress-line" />}</button><div className="upload-side"><div className="format-summary"><strong>الصيغ المدعومة</strong><div><b>PDF</b><b>DOCX</b><b>XLSX</b><b>TXT</b><b>MD</b><b>صور</b></div><small>الاستخراج يتم داخل جهازك دون رفع الملف إلى خدمة خارجية.</small></div><div className="mode-choice"><span>الصيغة الداخلية</span><div className="mode-switch"><button className={mode === "HM" ? "selected" : ""} onClick={() => setMode("HM")}>HM · واضح</button><button className={mode === "AIM" ? "selected" : ""} onClick={() => setMode("AIM")}>AIM · مختصر</button></div></div></div></div><div className="conversion-actions"><div className="ai-inline"><Check size={16} /><span><strong>المعالجة محلية</strong><small>نراجع النتيجة قبل إنشاء الملف</small></span></div><button className="primary-button" disabled={!uploaded || extracting} onClick={() => void convertUploaded()}><WandSparkles size={17} /> تحويل ومعاينة</button></div>{uploaded && <div className="extracted-preview"><div className="field-line"><strong>النص المستخرج</strong><span>{uploaded.notes[0] || "جاهز"}</span></div><pre>{uploaded.text.slice(0, 2400)}{uploaded.text.length > 2400 ? "\n…" : ""}</pre></div>}{uploaded?.document && <div className="export-panel"><div><strong>إخراج NFF إلى صيغة أخرى</strong><small>متاح الآن: TXT وMarkdown وJSON وHTML</small></div><div className="export-actions"><select value={exportFormat} onChange={(event) => setExportFormat(event.target.value as ExportFormat)} aria-label="صيغة الإخراج"><option value="md">Markdown</option><option value="txt">TXT</option><option value="json">JSON</option><option value="html">HTML</option></select><button className="outline-button" onClick={prepareExport}>معاينة الإخراج</button>{exportPreview && <button className="primary-button" onClick={downloadExport}>تنزيل بعد المراجعة</button>}</div></div>}{exportPreview && <div className="export-preview"><strong>{exportPreview.name}</strong><pre>{exportPreview.content.slice(0, 1800)}</pre></div>}</section>}
