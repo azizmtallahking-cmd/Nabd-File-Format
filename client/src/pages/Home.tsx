@@ -31,6 +31,8 @@ export default function Home() {
   const [progress, setProgress] = useState("");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("md");
   const [exportPreview, setExportPreview] = useState<{ name: string; mime: string; content: string } | null>(null);
+  const [creationPath, setCreationPath] = useState<"open" | "write" | "design" | null>(null);
+  const [customStyle, setCustomStyle] = useState({ theme: "classic", accent: "ink", spacing: "relaxed" });
   const lineCount = useMemo(() => content.split("\n").length, [content]);
   const bookUnits = useMemo(() => bookText.split(/\n\s*---\s*\n/).filter(Boolean), [bookText]);
 
@@ -147,12 +149,62 @@ export default function Home() {
         <div className="view-heading"><div><span className="room-overline">FILE DESK</span><h2>ملفاتك</h2><p>كل ملف يبدأ من هنا: افتح، راجع، ثم قرر ما تريد فعله به.</p></div><button className="primary-button" onClick={() => setShowNew(true)}><FilePlus2 size={17} /> ملف جديد</button></div>
         {notice && <Notice notice={notice} onClose={() => setNotice(null)} />}
         <div className="quick-grid">
-          <button className="quick-card primary-quick" onClick={() => inputRef.current?.click()}><span className="quick-icon"><Upload size={21} /></span><div><strong>فتح ملف</strong><small>NFF أو ملف من جهازك</small></div><ChevronLeft size={18} /></button>
-          <button className="quick-card" onClick={() => { setFileName("مسودة جديدة"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setNotice(null); }}><span className="quick-icon mint"><FilePlus2 size={21} /></span><div><strong>إنشاء HM</strong><small>ابدأ بنسخة بشرية قابلة للمراجعة</small></div><ChevronLeft size={18} /></button>
-          <button className="quick-card" onClick={() => changeRoom("convert")}><span className="quick-icon coral"><WandSparkles size={21} /></span><div><strong>تحويل إلى NFF</strong><small>انقل PDF أو Word أو Excel إلى NFF</small></div><ChevronLeft size={18} /></button>
+          <button className={`quick-card ${creationPath === "open" ? "active" : ""}`} onClick={() => { setCreationPath("open"); inputRef.current?.click(); }}><span className="quick-icon"><Upload size={21} /></span><div><strong>فتح ملف</strong><small>NFF أو ملف من جهازك</small></div><ChevronLeft size={18} /></button>
+          <button className={`quick-card ${creationPath === "write" ? "active" : ""}`} onClick={() => { setCreationPath("write"); setFileName("مسودة جديدة"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setNotice(null); }}><span className="quick-icon mint"><FilePlus2 size={21} /></span><div><strong>إنشاء نص</strong><small>كتابة أو لصق نص (AIM/HM)</small></div><ChevronLeft size={18} /></button>
+          <button className={`quick-card ${creationPath === "design" ? "active" : ""}`} onClick={() => { setCreationPath("design"); setMode("HM"); setFileName("تصميم مخصص"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setNotice(null); }}><span className="quick-icon coral"><Layers3 size={21} /></span><div><strong>تخصيص HM</strong><small>نمط وألوان وترتيب مخصص</small></div><ChevronLeft size={18} /></button>
         </div>
         <input ref={inputRef} type="file" accept=".nff,.txt,.md,.pdf,.docx,.xlsx,.png,.jpg,.jpeg" className="browser-file-input" onChange={(event) => { const file = event.target.files?.[0]; if (file) void openFile(file); }} />
-        <div className="editor-layout"><div className="editor-panel"><div className="panel-head"><div><strong>{fileName}</strong><small>{lineCount} أسطر · مسودة محلية</small></div><button className="outline-button" onClick={() => void generate()}><Check size={16} /> معاينة الملف</button></div><textarea value={content} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label="محتوى الملف" /><div className="editor-foot"><div className="mode-switch"><button className={mode === "HM" ? "selected" : ""} onClick={() => setMode("HM")}>HM</button><button className={mode === "AIM" ? "selected" : ""} onClick={() => setMode("AIM")}>AIM</button></div><span>لن يتم الحفظ أو التنزيل دون مراجعتك</span></div></div><div className="side-card ai-card"><div className="ai-badge"><Check size={16} /> جاهز للمراجعة</div><h3>مراجعة قبل التنزيل</h3><p>راجع النص والاتجاه والمود قبل إنشاء الملف أو تنزيله.</p><button className="soft-button" onClick={() => setNotice({ tone: "neutral", text: "المعاينة جاهزة؛ لا يتم الحفظ أو التنزيل تلقائياً." })}>فتح تعليمات المراجعة</button><div className="ai-note">لا تغيير للنص · موافقة صريحة قبل الاعتماد</div></div></div>
+        <div className="editor-layout">
+          <div className="editor-panel">
+            <div className="panel-head">
+              <div><strong>{fileName}</strong><small>{lineCount} أسطر · مسودة محلية</small></div>
+              <button className="outline-button" onClick={() => void generate()}><Check size={16} /> معاينة الملف</button>
+            </div>
+            <textarea value={content} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label="محتوى الملف" />
+            <div className="editor-foot">
+              <div className="mode-switch">
+                <button className={mode === "HM" ? "selected" : ""} onClick={() => setMode("HM")}>HM</button>
+                <button className={mode === "AIM" ? "selected" : ""} onClick={() => { setMode("AIM"); if (creationPath === "design") setCreationPath("write"); }}>AIM</button>
+              </div>
+              <span>لن يتم الحفظ أو التنزيل دون مراجعتك</span>
+            </div>
+          </div>
+          
+          {creationPath === "design" && mode === "HM" ? (
+            <div className="side-card design-card">
+              <div className="ai-badge"><Layers3 size={16} /> تخصيص بصري</div>
+              <h3>تنسيق HM مخصص</h3>
+              <div className="design-options">
+                <div className="option-group">
+                  <span>السمة</span>
+                  <div className="chips">
+                    <button className={customStyle.theme === "classic" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "classic" }))}>كلاسيك</button>
+                    <button className={customStyle.theme === "modern" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "modern" }))}>عصري</button>
+                    <button className={customStyle.theme === "glass" ? "active" : ""} onClick={() => setCustomStyle(s => ({ ...s, theme: "glass" }))}>زجاجي</button>
+                  </div>
+                </div>
+                <div className="option-group">
+                  <span>اللون المميز</span>
+                  <div className="color-dots">
+                    <button className={`dot ink ${customStyle.accent === "ink" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "ink" }))} />
+                    <button className={`dot moss ${customStyle.accent === "moss" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "moss" }))} />
+                    <button className={`dot copper ${customStyle.accent === "copper" ? "active" : ""}`} onClick={() => setCustomStyle(s => ({ ...s, accent: "copper" }))} />
+                  </div>
+                </div>
+              </div>
+              <button className="soft-button" onClick={() => void generate()}>تطبيق التنسيق</button>
+              <div className="ai-note">التخصيص بصري فقط · لا يغير نواة NFF</div>
+            </div>
+          ) : (
+            <div className="side-card ai-card">
+              <div className="ai-badge"><Check size={16} /> جاهز للمراجعة</div>
+              <h3>مراجعة قبل التنزيل</h3>
+              <p>راجع النص والاتجاه والمود قبل إنشاء الملف أو تنزيله.</p>
+              <button className="soft-button" onClick={() => setNotice({ tone: "neutral", text: "المعاينة جاهزة؛ لا يتم الحفظ أو التنزيل تلقائياً." })}>فتح تعليمات المراجعة</button>
+              <div className="ai-note">لا تغيير للنص · موافقة صريحة قبل الاعتماد</div>
+            </div>
+          )}
+        </div>
         {preview && <div className="preview-card"><div><strong>المعاينة جاهزة</strong><small>{result ? `${formatBytes(result.bytes)} · ${result.nodes} عناصر` : "راجع النسخة قبل التنزيل"}</small></div><button className="primary-button" onClick={download}>تنزيل الملف</button></div>}
       </section>}
 
