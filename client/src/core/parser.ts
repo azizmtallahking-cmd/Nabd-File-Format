@@ -1,5 +1,6 @@
 import { HEADER_LENGTH, inspectHeader } from "./header";
-import type { ContentNode, Frontmatter, ParsedNffDocument, SemanticTag, QcmType } from "./model";
+import type { Frontmatter, ParsedNffDocument, SemanticTag } from "./model";
+import type { NffNode, QcmType, ProseTone } from "./schema";
 
 const tagPattern = /\[\[(section|priority|classification|callout|tab|tag):\s*([^\]]*)\]\]/g;
 const nodePattern = /<(nff-prose|nff-qcm)([^>]*)>([\s\S]*?)<\/\1>/g;
@@ -45,28 +46,28 @@ function inner(source: string, name: string): string {
   return match?.[1]?.trim() ?? "";
 }
 
-function parseNodes(body: string): ContentNode[] {
-  const nodes: ContentNode[] = [];
+function parseNodes(body: string): NffNode[] {
+  const nodes: NffNode[] = [];
   for (const match of Array.from(body.matchAll(nodePattern))) {
     const kind = match[1];
     const attrs = attributes(match[2]);
     const content = match[3];
     if (kind === "nff-prose") {
-      nodes.push({ kind: "prose", tone: attrs.tone, text: content.trim() });
+      nodes.push({ type: "prose", tone: (attrs.tone as ProseTone) || "neutral", content: content.trim() });
       continue;
     }
     const qcmType = attrs.type as QcmType | undefined;
     if (!attrs.id || !qcmType || !["single_choice", "multi_choice", "text_input"].includes(qcmType)) {
-      nodes.push({ kind: "error", message: "عنصر QCM يفتقد id أو type صالحاً", source: match[0] });
+      nodes.push({ type: "error", reason: "عنصر QCM يفتقد id أو type صالحاً" });
       continue;
     }
     const question = inner(content, "nff-question");
-    const options = Array.from(content.matchAll(/<nff-option\s+([^>]*)>([\s\S]*?)<\/nff-option>/g)).map((option) => ({ value: attributes(option[1]).value ?? "", text: option[2].trim() }));
+    const options = Array.from(content.matchAll(/<nff-option\s+([^>]*)>([\s\S]*?)<\/nff-option>/g)).map((option) => ({ value: attributes(option[1]).value ?? "", label: option[2].trim() }));
     if (!question || ((qcmType === "single_choice" || qcmType === "multi_choice") && options.length === 0)) {
-      nodes.push({ kind: "error", message: "عنصر QCM غير مكتمل", source: match[0] });
+      nodes.push({ type: "error", reason: "عنصر QCM غير مكتمل" });
       continue;
     }
-    nodes.push({ kind: "qcm", id: attrs.id, type: qcmType, question, options });
+    nodes.push({ type: "qcm", id: attrs.id, qcmType, question, options });
   }
   return nodes;
 }

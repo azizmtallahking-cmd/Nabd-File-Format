@@ -2,7 +2,8 @@
 import * as XLSX from "xlsx";
 import { generateAim, generateHm } from "./generators";
 import { parseNff } from "./parser";
-import type { ContentNode, ParsedNffDocument } from "./model";
+import type { ParsedNffDocument } from "./model";
+import type { NffNode } from "./schema";
 
 export type SourceFormat = "nff" | "pdf" | "docx" | "txt" | "md" | "xlsx" | "image" | "unknown";
 export type ExportFormat = "txt" | "md" | "json" | "html";
@@ -85,7 +86,12 @@ export async function convertExtractedToNff(extracted: ExtractedFile, mode: Conv
 
 export function exportNff(document: ParsedNffDocument, format: ExportFormat): { name: string; mime: string; content: string } {
   const title = document.frontmatter.title || "nabd-file";
-  const plainText = document.nodes.map((node: ContentNode) => node.kind === "prose" ? node.text : node.kind === "qcm" ? `${node.question}\n${node.options.map((option: { value: string; text: string }) => `- ${option.text}`).join("\n")}` : node.message).join("\n\n");
+  const plainText = document.nodes.map((node: NffNode) => {
+    if (node.type === "prose") return node.content;
+    if (node.type === "qcm") return `${node.question}\n${node.options?.map(opt => `- ${opt.label}`).join("\n")}`;
+    if (node.type === "error") return node.reason;
+    return "";
+  }).join("\n\n");
   if (format === "txt") return { name: `${title}.txt`, mime: "text/plain;charset=utf-8", content: plainText };
   if (format === "md") return { name: `${title}.md`, mime: "text/markdown;charset=utf-8", content: `# ${title}\n\n${plainText}` };
   if (format === "json") return { name: `${title}.json`, mime: "application/json;charset=utf-8", content: JSON.stringify(document, null, 2) };

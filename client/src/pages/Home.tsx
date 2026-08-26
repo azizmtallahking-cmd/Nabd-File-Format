@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronLeft, FilePlus2, FolderOpen, Image, Layers3, Upload, WandSparkles, X } from "lucide-react";
 import { generateAim, generateHm, inspectHeader, parseNff } from "../core";
 import { convertExtractedToNff, detectFormat, exportNff, extractFile, type ExportFormat, type ExtractedFile } from "../core/file-conversion";
+import { NffRenderer } from "../components/NffRenderer";
+import { ParsedNffDocument } from "../core/schema";
 
 type Room = "files" | "convert" | "book";
 type Notice = { tone: "success" | "error" | "neutral"; text: string } | null;
@@ -53,8 +55,26 @@ export default function Home() {
       const inspection = inspectHeader(output.bytes);
       if (!inspection.isValid) throw new Error(inspection.error);
       const parsed = parseNff(output.bytes);
+      
+      // Architectural Rule: AIM compression is mechanical and deterministic
+      if (requestedMode === "AIM") {
+        const compressedBody = source
+          .replace(/<nff-prose[^>]*>/g, '')
+          .replace(/<\/nff-prose>/g, '')
+          .replace(/<nff-qcm id="([^"]+)"[^>]*>([\s\S]*?)<\/nff-qcm>/g, (_, id, body) => {
+             const question = /<nff-question>(.*?)<\/nff-question>/.exec(body)?.[1] ?? '';
+             const options = [...body.matchAll(/<nff-option value="([^"]+)">(.*?)<\/nff-option>/g)]
+               .map(m => `${m[1]}:${m[2]}`).join('|');
+             return `[QCM:${id}] ${question} (${options})`;
+          })
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+        setPreview(compressedBody);
+      } else {
+        setPreview(new TextDecoder().decode(output.bytes));
+      }
+      
       setResult({ bytes: output.bytes.length, tags: parsed.tags.length, nodes: parsed.nodes.length, title: parsed.frontmatter.title });
-      setPreview(new TextDecoder().decode(output.bytes));
       setNotice({ tone: "success", text: "تم تجهيز الملف. راجعه قبل أي تنزيل." });
     } catch (error) {
       setNotice({ tone: "error", text: error instanceof Error ? error.message : "تعذر تجهيز الملف." });
@@ -205,7 +225,31 @@ export default function Home() {
             </div>
           )}
         </div>
-        {preview && <div className="preview-card"><div><strong>المعاينة جاهزة</strong><small>{result ? `${formatBytes(result.bytes)} · ${result.nodes} عناصر` : "راجع النسخة قبل التنزيل"}</small></div><button className="primary-button" onClick={download}>تنزيل الملف</button></div>}
+        {preview && (
+          <div className="preview-container">
+            <div className="preview-card">
+              <div>
+                <strong>المعاينة جاهزة</strong>
+                <small>{result ? `${formatBytes(result.bytes)} · ${result.nodes} عناصر` : "راجع النسخة قبل التنزيل"}</small>
+              </div>
+              <button className="primary-button" onClick={download}>تنزيل الملف</button>
+            </div>
+            {mode === "HM" && (
+              <div className="nff-render-box">
+                <div className="render-head">معاينة العرض الدلالي (HM)</div>
+                <NffRenderer 
+                  nodes={parseNff(new TextEncoder().encode(preview)).nodes} 
+                />
+              </div>
+            )}
+            {mode === "AIM" && (
+              <div className="nff-render-box aim-view">
+                <div className="render-head">معاينة الضغط الميكانيكي (AIM)</div>
+                <pre className="aim-text">{preview}</pre>
+              </div>
+            )}
+          </div>
+        )}
       </section>}
 
       {room === "convert" && <section className="room-view simple-room"><div className="view-heading"><div><span className="room-overline">مختبر التحويل</span><h2>حوّل ملفاتك إلى NFF</h2><p>ارفع الملف، اختر المود، ثم راجع النتيجة قبل تنزيلها.</p></div><button className="outline-button" onClick={() => changeRoom("files")}><ArrowRight size={16} /> العودة إلى الملفات</button></div>{notice && <Notice notice={notice} onClose={() => setNotice(null)} />}<div className="upload-stage"><input ref={convertInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.nff" className="browser-file-input" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleConversionFile(file); }} /><button className="drop-card" onClick={() => convertInputRef.current?.click()}><span className="drop-icon"><Upload size={28} /></span><strong>{extracting ? progress || "جارٍ قراءة الملف" : uploaded ? uploaded.name : "اختر ملفاً من جهازك"}</strong><small>{extracting ? "المعالجة تتم محلياً" : uploaded ? `${uploaded.format.toUpperCase()} · ${Math.round(uploaded.size / 1024)} KB · جاهز للتحويل` : "PDF · Word · Excel · TXT · Markdown · صورة"}</small>{extracting && <span className="progress-line" />}</button><div className="upload-side"><div className="format-summary"><strong>الصيغ المدعومة</strong><div><b>PDF</b><b>DOCX</b><b>XLSX</b><b>TXT</b><b>MD</b><b>صور</b></div><small>الاستخراج يتم داخل جهازك دون رفع الملف إلى خدمة خارجية.</small></div><div className="mode-choice"><span>الصيغة الداخلية</span><div className="mode-switch"><button className={mode === "HM" ? "selected" : ""} onClick={() => setMode("HM")}>HM · واضح</button><button className={mode === "AIM" ? "selected" : ""} onClick={() => setMode("AIM")}>AIM · مختصر</button></div></div></div></div><div className="conversion-actions"><div className="ai-inline"><Check size={16} /><span><strong>المعالجة محلية</strong><small>نراجع النتيجة قبل إنشاء الملف</small></span></div><button className="primary-button" disabled={!uploaded || extracting} onClick={() => void convertUploaded()}><WandSparkles size={17} /> تحويل ومعاينة</button></div>{uploaded && <div className="extracted-preview"><div className="field-line"><strong>النص المستخرج</strong><span>{uploaded.notes[0] || "جاهز"}</span></div><pre>{uploaded.text.slice(0, 2400)}{uploaded.text.length > 2400 ? "\n…" : ""}</pre></div>}{uploaded?.document && <div className="export-panel"><div><strong>إخراج NFF إلى صيغة أخرى</strong><small>متاح الآن: TXT وMarkdown وJSON وHTML</small></div><div className="export-actions"><select value={exportFormat} onChange={(event) => setExportFormat(event.target.value as ExportFormat)} aria-label="صيغة الإخراج"><option value="md">Markdown</option><option value="txt">TXT</option><option value="json">JSON</option><option value="html">HTML</option></select><button className="outline-button" onClick={prepareExport}>معاينة الإخراج</button>{exportPreview && <button className="primary-button" onClick={downloadExport}>تنزيل بعد المراجعة</button>}</div></div>}{exportPreview && <div className="export-preview"><strong>{exportPreview.name}</strong><pre>{exportPreview.content.slice(0, 1800)}</pre></div>}</section>}
