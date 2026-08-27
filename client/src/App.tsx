@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import Home from "./pages/Home";
 import { AimDraftPage } from "./pages/AimDraftPage";
 import { HmDraftPage } from "./pages/HmDraftPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
-type Route = { room: string; fileId?: string; mode?: 'aim' | 'hm' };
+type Route = { room: string; fileId?: string; mode?: 'aim' | 'hm'; returnTo?: string };
 
 export default function App() {
   const [route, setRoute] = useState<Route>({ room: "files" });
@@ -16,6 +17,9 @@ export default function App() {
       const parts = hash.split("/");
       if (parts[0] === "draft" && parts[1] && parts[2]) {
         setRoute({ room: "draft", mode: parts[1] as 'aim' | 'hm', fileId: parts[2] });
+      } else if (parts[0] === "settings") {
+        const params = new URLSearchParams(window.location.search);
+        setRoute({ room: "settings", returnTo: params.get("returnTo") || undefined });
       } else {
         setRoute({ room: parts[0] || "files" });
       }
@@ -36,6 +40,16 @@ export default function App() {
   if (route.room === "draft" && route.fileId) {
     if (route.mode === "aim") return <AimDraftPage fileId={route.fileId} onBack={() => navigate("files")} />;
     if (route.mode === "hm") return <HmDraftPage fileId={route.fileId} onBack={() => navigate("files")} />;
+  }
+
+  if (route.room === "settings") {
+    return <SettingsPage returnTo={route.returnTo} onBack={() => {
+      if (route.returnTo) {
+        window.location.hash = route.returnTo;
+      } else {
+        navigate("files");
+      }
+    }} />;
   }
 
   return <Home onNavigate={navigate} currentRoom={route.room} />;

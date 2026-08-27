@@ -5,6 +5,8 @@ import { generateAim, generateHm, inspectHeader, parseNff } from "../core";
 import { convertExtractedToNff, detectFormat, exportNff, extractFile, type ExportFormat, type ExtractedFile } from "../core/file-conversion";
 import { NffRenderer } from "../components/NffRenderer";
 import { ParsedNffDocument } from "../core/schema";
+import { activeKeyProvider, requireApiKey } from "../core/ai-key-provider";
+import { Settings } from "lucide-react";
 
 type Room = "files" | "convert" | "book";
 type Notice = { tone: "success" | "error" | "neutral"; text: string } | null;
@@ -55,6 +57,9 @@ export default function Home({ onNavigate, currentRoom }: HomeProps) {
   function changeRoom(next: Room) { onNavigate(next); setNotice(null); setPreview(null); setShowNew(false); }
 
   async function generate(source = content, requestedMode = mode) {
+    // Architectural Rule: requireApiKey + returnTo flow
+    if (!requireApiKey(window.location.hash || "files", (path) => window.location.hash = path)) return;
+
     try {
       const output = requestedMode === "AIM" ? await generateAim(source) : await generateHm(source);
       const inspection = inspectHeader(output.bytes);
@@ -150,6 +155,7 @@ export default function Home({ onNavigate, currentRoom }: HomeProps) {
         <button className={`rail-item ${room === "files" ? "active" : ""}`} onClick={() => changeRoom("files")}><FolderOpen size={18} /><span>الملفات</span><b>01</b></button>
         <button className={`rail-item ${room === "convert" ? "active" : ""}`} onClick={() => changeRoom("convert")}><Layers3 size={18} /><span>تحويل ملف</span><b>02</b></button>
         <button className={`rail-item ${room === "book" ? "active" : ""}`} onClick={() => changeRoom("book")}><BookOpen size={18} /><span>تحويل كتاب</span><b>03</b></button>
+        <button className={`rail-item ${room === "settings" ? "active" : ""}`} onClick={() => onNavigate("settings")}><Settings size={18} /><span>الإعدادات</span><b>04</b></button>
       </nav>
       <div className="rail-foot"><span className="pulse-dot" /> محتواك محلي<br /><small>لا شيء يغادر جهازك</small></div>
     </aside>
