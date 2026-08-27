@@ -1,9 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Download, Check, Settings2 } from 'lucide-react';
+import { ArrowRight, Download, Check, Settings2, Save } from 'lucide-react';
 import { NffRenderer } from '../components/NffRenderer';
 import { parseNff } from '../core';
 import { NffNode } from '../core/schema';
+import { exportAnswersAsAim } from '../core/answer-export';
 
 interface HmDraftPageProps {
   fileId: string;
@@ -19,9 +20,10 @@ export function HmDraftPage({ fileId, onBack }: HmDraftPageProps) {
   const [nodes, setNodes] = useState<NffNode[]>([]);
   const [name, setName] = useState<string>("hm-draft.nff");
   const [raw, setRaw] = useState<string>("");
+  const [docId, setDocId] = useState<string>("");
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
 
   useEffect(() => {
-    // In a real app, this would fetch from IndexedDB using fileId
     const stored = localStorage.getItem(`nff_draft_${fileId}`);
     if (stored) {
       const parsed = JSON.parse(stored);
@@ -30,12 +32,29 @@ export function HmDraftPage({ fileId, onBack }: HmDraftPageProps) {
         const doc = parseNff(nffBytes);
         setNodes(doc.nodes);
         setRaw(parsed.body);
+        setDocId(doc.frontmatter.doc_id || "unknown_source");
       } catch (e) {
         setNodes([{ type: 'error', reason: 'فشل تحليل محتوى HM' }]);
       }
       setName(parsed.name || "hm-draft.nff");
     }
   }, [fileId]);
+
+  const hasQcm = nodes.some(n => n.type === 'qcm');
+
+  const handleAnswer = (id: string, value: string | string[]) => {
+    setAnswers(prev => ({ ...prev, [id]: value }));
+  };
+
+  const finishAndSaveAnswers = async () => {
+    if (!docId) return;
+    const { bytes } = await exportAnswersAsAim(docId, answers);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+    link.download = `${name.replace(".nff", "")}-answers-AIM.nff`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
 
   const download = () => {
     const link = document.createElement("a");
@@ -61,9 +80,14 @@ export function HmDraftPage({ fileId, onBack }: HmDraftPageProps) {
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#f0efe7] text-[#8b684c] text-[10px] font-bold border border-[#d5d7d0]">
             <Check size={12} /> مود بشري
           </div>
-          <button onClick={download} className="flex items-center gap-2 bg-[#182743] hover:bg-[#29496c] text-white px-6 py-2 rounded-full text-sm font-bold transition-all active:scale-95 shadow-lg shadow-[#182743]/10">
+          <button onClick={download} className="flex items-center gap-2 border border-[#d5d7d0] hover:bg-[#f0efe7] text-[#182743] px-6 py-2 rounded-full text-sm font-bold transition-all active:scale-95">
             <Download size={16} /> تنزيل HM
           </button>
+          {hasQcm && (
+            <button onClick={finishAndSaveAnswers} className="flex items-center gap-2 bg-[#182743] hover:bg-[#29496c] text-white px-6 py-2 rounded-full text-sm font-bold transition-all active:scale-95 shadow-lg shadow-[#182743]/10">
+              <Save size={16} /> إنهاء وحفظ الإجابات
+            </button>
+          )}
         </div>
       </header>
 
@@ -77,7 +101,7 @@ export function HmDraftPage({ fileId, onBack }: HmDraftPageProps) {
             <span className="text-[10px] text-[#a8835c] font-mono">CORE v1.0</span>
           </div>
           
-          <NffRenderer nodes={nodes} />
+          <NffRenderer nodes={nodes} onAnswer={handleAnswer} />
           
           {nodes.length === 0 && (
             <div className="py-20 text-center text-[#a8835c] italic">
