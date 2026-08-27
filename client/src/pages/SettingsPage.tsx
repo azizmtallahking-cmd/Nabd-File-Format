@@ -25,15 +25,17 @@ export function SettingsPage({ onBack, returnTo }: SettingsPageProps) {
   const saveKey = () => {
     if (!key.trim()) return;
     setStatus('checking');
-    // Mock verification
+    // Actual storage and status update
     setTimeout(() => {
       activeKeyProvider.setApiKey(key.trim());
       setStatus('valid');
       setNotice("تم حفظ مفتاح الذكاء بنجاح.");
+      // If we came from requireApiKey, return after success
       if (returnTo) {
-        setTimeout(() => onBack(), 1500);
+        const target = returnTo.startsWith('#') ? returnTo.slice(1) : returnTo;
+        setTimeout(() => onBack(), 1000);
       }
-    }, 1000);
+    }, 800);
   };
 
   const deleteKey = () => {

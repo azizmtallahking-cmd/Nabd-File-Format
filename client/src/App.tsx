@@ -17,9 +17,14 @@ export default function App() {
       const parts = hash.split("/");
       if (parts[0] === "draft" && parts[1] && parts[2]) {
         setRoute({ room: "draft", mode: parts[1] as 'aim' | 'hm', fileId: parts[2] });
-      } else if (parts[0] === "settings") {
-        const params = new URLSearchParams(window.location.search);
-        setRoute({ room: "settings", returnTo: params.get("returnTo") || undefined });
+      } else if (parts[0].startsWith("settings")) {
+        const queryIdx = parts[0].indexOf("?");
+        let returnTo: string | undefined;
+        if (queryIdx !== -1) {
+          const params = new URLSearchParams(parts[0].slice(queryIdx + 1));
+          returnTo = params.get("returnTo") || undefined;
+        }
+        setRoute({ room: "settings", returnTo });
       } else {
         setRoute({ room: parts[0] || "files" });
       }
