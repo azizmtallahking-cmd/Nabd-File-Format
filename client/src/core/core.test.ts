@@ -18,8 +18,8 @@ assert.notDeepEqual(hm.bytes.subarray(5, 10), aim.bytes.subarray(5, 10));
 
 const parsedHm = parseNff(hm.bytes);
 assert.equal(parsedHm.frontmatter.title, "اختبار عربي");
-assert.equal(parsedHm.nodes[0]?.kind, "prose");
-assert.equal((parsedHm.nodes[0] as { text: string }).text.includes("سلامة UTF-8"), true);
+assert.equal(parsedHm.nodes[0]?.type, "prose");
+assert.equal((parsedHm.nodes[0] as { content: string }).content.includes("سلامة UTF-8"), true);
 
 const wrongVersion = hm.bytes.slice();
 wrongVersion[13] = 0x31;
