@@ -1,6 +1,42 @@
 /* Design: ورشة الإشارة — the app opens directly into a tactile NFF workbench, never a generic landing page. */
+import { useState, useEffect } from "react";
 import Home from "./pages/Home";
+import { AimDraftPage } from "./pages/AimDraftPage";
+import { HmDraftPage } from "./pages/HmDraftPage";
+
+type Route = { room: string; fileId?: string; mode?: 'aim' | 'hm' };
 
 export default function App() {
-  return <Home />;
+  const [route, setRoute] = useState<Route>({ room: "files" });
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (!hash) { setRoute({ room: "files" }); return; }
+      const parts = hash.split("/");
+      if (parts[0] === "draft" && parts[1] && parts[2]) {
+        setRoute({ room: "draft", mode: parts[1] as 'aim' | 'hm', fileId: parts[2] });
+      } else {
+        setRoute({ room: parts[0] || "files" });
+      }
+    };
+    window.addEventListener("hashchange", handleHash);
+    handleHash();
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
+
+  const navigate = (room: string, mode?: 'aim' | 'hm', fileId?: string) => {
+    if (room === "draft" && mode && fileId) {
+      window.location.hash = `draft/${mode}/${fileId}`;
+    } else {
+      window.location.hash = room;
+    }
+  };
+
+  if (route.room === "draft" && route.fileId) {
+    if (route.mode === "aim") return <AimDraftPage fileId={route.fileId} onBack={() => navigate("files")} />;
+    if (route.mode === "hm") return <HmDraftPage fileId={route.fileId} onBack={() => navigate("files")} />;
+  }
+
+  return <Home onNavigate={navigate} currentRoom={route.room} />;
 }

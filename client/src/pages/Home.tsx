@@ -14,8 +14,13 @@ const CONVERT_SAMPLE = "# عنوان المستند\n\nاكتب أو ألصق ا
 
 function formatBytes(bytes: number) { return `${bytes.toLocaleString("ar-EG")} بايت`; }
 
-export default function Home() {
-  const [room, setRoom] = useState<Room | "draft">("files");
+interface HomeProps {
+  onNavigate: (room: string, mode?: 'aim' | 'hm', fileId?: string) => void;
+  currentRoom: string;
+}
+
+export default function Home({ onNavigate, currentRoom }: HomeProps) {
+  const [room, setRoom] = [currentRoom, onNavigate] as const;
   const [showNew, setShowNew] = useState(false);
   const [content, setContent] = useState(STARTER_CONTENT);
   const [convertText, setConvertText] = useState(CONVERT_SAMPLE);
@@ -47,53 +52,39 @@ export default function Home() {
     return () => window.removeEventListener("nff:file-open", onExternalFile);
   }, []);
 
-  function changeRoom(next: Room) { setRoom(next); setNotice(null); setPreview(null); setShowNew(false); }
+  function changeRoom(next: Room) { onNavigate(next); setNotice(null); setPreview(null); setShowNew(false); }
 
   async function generate(source = content, requestedMode = mode) {
     try {
       const output = requestedMode === "AIM" ? await generateAim(source) : await generateHm(source);
       const inspection = inspectHeader(output.bytes);
       if (!inspection.isValid) throw new Error(inspection.error);
-      const parsed = parseNff(output.bytes);
       
-      // Architectural Rule: AIM compression is mechanical and deterministic
-      if (requestedMode === "AIM") {
-        const compressedBody = source
-          .replace(/<nff-prose[^>]*>/g, '')
-          .replace(/<\/nff-prose>/g, '')
-          .replace(/<nff-qcm id="([^"]+)"[^>]*>([\s\S]*?)<\/nff-qcm>/g, (_, id, body) => {
-             const question = /<nff-question>(.*?)<\/nff-question>/.exec(body)?.[1] ?? '';
-             const options = [...body.matchAll(/<nff-option value="([^"]+)">(.*?)<\/nff-option>/g)]
-               .map(m => `${m[1]}:${m[2]}`).join('|');
-             return `[QCM:${id}] ${question} (${options})`;
-          })
-          .replace(/\n{3,}/g, '\n\n')
-          .trim();
-        setPreview(compressedBody);
-      } else {
-        setPreview(new TextDecoder().decode(output.bytes));
-      }
+      const fileId = Math.random().toString(36).slice(2, 10);
+      localStorage.setItem(`nff_draft_${fileId}`, JSON.stringify({
+        name: fileName.endsWith(".nff") ? fileName : `${fileName}.nff`,
+        body: new TextDecoder().decode(output.bytes),
+        mode: requestedMode
+      }));
       
-      setResult({ bytes: output.bytes.length, tags: parsed.tags.length, nodes: parsed.nodes.length, title: parsed.frontmatter.title });
-      setNotice({ tone: "success", text: "تم تجهيز الملف. راجعه قبل أي تنزيل." });
+      onNavigate("draft", requestedMode.toLowerCase() as 'aim' | 'hm', fileId);
     } catch (error) {
       setNotice({ tone: "error", text: error instanceof Error ? error.message : "تعذر تجهيز الملف." });
     }
   }
 
   async function openFile(file: File) {
-    if (detectFormat(file) !== "nff") { setRoom("convert"); await handleConversionFile(file); return; }
+    if (detectFormat(file) !== "nff") { onNavigate("convert"); await handleConversionFile(file); return; }
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const parsed = parseNff(bytes);
-      setContent(parsed.bodyContent);
-      setMode(parsed.mode);
-      setFileName(file.name);
-      setResult({ bytes: bytes.length, tags: parsed.tags.length, nodes: parsed.nodes.length, title: parsed.frontmatter.title });
-      setPreview(new TextDecoder().decode(bytes));
-      setRoom("draft");
-      setNotice({ tone: "success", text: `تم فتح ${file.name}. المود مقفل على ${parsed.mode}.` });
-      setShowNew(false);
+      const fileId = Math.random().toString(36).slice(2, 10);
+      localStorage.setItem(`nff_draft_${fileId}`, JSON.stringify({
+        name: file.name,
+        body: new TextDecoder().decode(bytes),
+        mode: parsed.mode
+      }));
+      onNavigate("draft", parsed.mode.toLowerCase() as 'aim' | 'hm', fileId);
     } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "هذا الملف غير صالح." }); }
   }
 
@@ -171,8 +162,8 @@ export default function Home() {
         {notice && <Notice notice={notice} onClose={() => setNotice(null)} />}
         <div className="quick-grid">
           <button className="quick-card" onClick={() => { setCreationPath("open"); inputRef.current?.click(); }}><span className="quick-icon"><Upload size={21} /></span><div><strong>فتح ملف</strong><small>NFF أو ملف من جهازك</small></div><ChevronLeft size={18} /></button>
-          <button className="quick-card" onClick={() => { setCreationPath("write"); setFileName("مسودة جديدة"); setContent(STARTER_CONTENT); setMode("HM"); setResult(null); setPreview(null); setRoom("draft"); }}><span className="quick-icon mint"><FilePlus2 size={21} /></span><div><strong>إنشاء نص</strong><small>كتابة أو لصق نص (AIM/HM)</small></div><ChevronLeft size={18} /></button>
-          <button className="quick-card" onClick={() => { setCreationPath("design"); setMode("HM"); setFileName("تصميم مخصص"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); setRoom("draft"); }}><span className="quick-icon coral"><Layers3 size={21} /></span><div><strong>تخصيص HM</strong><small>نمط وألوان وترتيب مخصص</small></div><ChevronLeft size={18} /></button>
+          <button className="quick-card" onClick={() => { setCreationPath("write"); setFileName("مسودة جديدة"); setContent(STARTER_CONTENT); setMode("HM"); setResult(null); setPreview(null); }}><span className="quick-icon mint"><FilePlus2 size={21} /></span><div><strong>إنشاء نص</strong><small>كتابة أو لصق نص (AIM/HM)</small></div><ChevronLeft size={18} /></button>
+          <button className="quick-card" onClick={() => { setCreationPath("design"); setMode("HM"); setFileName("تصميم مخصص"); setContent(STARTER_CONTENT); setResult(null); setPreview(null); }}><span className="quick-icon coral"><Layers3 size={21} /></span><div><strong>تخصيص HM</strong><small>نمط وألوان وترتيب مخصص</small></div><ChevronLeft size={18} /></button>
         </div>
         <input ref={inputRef} type="file" accept=".nff,.txt,.md,.pdf,.docx,.xlsx,.png,.jpg,.jpeg" className="browser-file-input" onChange={(event) => { const file = event.target.files?.[0]; if (file) void openFile(file); }} />
       </section>}
