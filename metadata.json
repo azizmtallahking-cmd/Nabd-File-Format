@@ -1,0 +1,8 @@
+{
+  "name": "Nabd File Format",
+  "description": "Nabd File Format (NFF) workbench, document conversion and visual editor for structured Arabic-first documents.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
