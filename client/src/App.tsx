@@ -12,23 +12,29 @@ export default function App() {
 
   useEffect(() => {
     const handleHash = () => {
-      const hash = window.location.hash.replace("#", "");
-      if (!hash) { setRoute({ room: "files" }); return; }
-      const parts = hash.split("/");
+      // Clean hash of leading '#' and optional leading '/'
+      const cleanHash = window.location.hash.replace(/^#\/?/, "");
+      if (!cleanHash) {
+        setRoute({ room: "files" });
+        return;
+      }
+
+      // Check for query parameters anywhere in hash
+      const [pathPart, queryString] = cleanHash.split("?");
+      const queryParams = new URLSearchParams(queryString || "");
+      const returnTo = queryParams.get("returnTo") || undefined;
+
+      const parts = pathPart.split("/").filter(Boolean);
+
       if (parts[0] === "draft" && parts[1] && parts[2]) {
         setRoute({ room: "draft", mode: parts[1] as 'aim' | 'hm', fileId: parts[2] });
-      } else if (parts[0].startsWith("settings")) {
-        const queryIdx = parts[0].indexOf("?");
-        let returnTo: string | undefined;
-        if (queryIdx !== -1) {
-          const params = new URLSearchParams(parts[0].slice(queryIdx + 1));
-          returnTo = params.get("returnTo") || undefined;
-        }
+      } else if (parts[0] === "settings") {
         setRoute({ room: "settings", returnTo });
       } else {
         setRoute({ room: parts[0] || "files" });
       }
     };
+
     window.addEventListener("hashchange", handleHash);
     handleHash();
     return () => window.removeEventListener("hashchange", handleHash);

@@ -47,7 +47,8 @@ export const activeKeyProvider = new StandaloneKeyProvider();
 export function requireApiKey(currentPath: string, onRedirect: (path: string) => void): string | null {
   const key = activeKeyProvider.getActiveApiKey();
   if (!key) {
-    onRedirect(`/settings?returnTo=${encodeURIComponent(currentPath)}&reason=ai-required`);
+    const cleanPath = currentPath.replace(/^#\/?/, "");
+    onRedirect(`settings?returnTo=${encodeURIComponent(cleanPath)}&reason=ai-required`);
     return null;
   }
   return key;
