@@ -7,12 +7,13 @@ import { ProseTone, UserVisualProfile } from './schema';
  * AI output intents (ProseTone) are mapped to CSS tokens here.
  */
 
-export const TONE_STYLES: Record<ProseTone, { bg: string; text: string; accent: string; weight: string }> = {
-  executive:  { bg: 'bg-stone-50',   text: 'text-stone-900',   accent: 'border-amber-600',   weight: 'font-medium' },
-  narrative:  { bg: 'bg-transparent', text: 'text-stone-700',  accent: 'border-stone-300',   weight: 'font-normal' },
-  urgent:     { bg: 'bg-rose-50',    text: 'text-rose-900',    accent: 'border-rose-500',    weight: 'font-semibold' },
-  reflective: { bg: 'bg-indigo-50',  text: 'text-indigo-900',  accent: 'border-indigo-400',  weight: 'font-normal italic' },
-  neutral:    { bg: 'bg-white',      text: 'text-stone-800',   accent: 'border-stone-200',   weight: 'font-normal' },
+export const TONE_STYLES: Record<string, { bg: string; text: string; accent: string; weight: string }> = {
+  executive:  { bg: 'bg-[#F8F7F1]',   text: 'text-[#0F3D36]',   accent: 'border-[#0F3D36]',   weight: 'font-semibold' },
+  narrative:  { bg: 'bg-transparent', text: 'text-[#0F3D36]/80',accent: 'border-[#D9B892]',   weight: 'font-normal' },
+  urgent:     { bg: 'bg-[#B75A3C]/10',text: 'text-[#B75A3C]',   accent: 'border-[#B75A3C]',   weight: 'font-semibold' },
+  reflective: { bg: 'bg-[#D9B892]/10',text: 'text-[#0F3D36]',   accent: 'border-[#D9B892]',   weight: 'font-normal italic' },
+  neutral:    { bg: 'bg-[#FFFFFF]',   text: 'text-[#0F3D36]/90',accent: 'border-[#0F3D36]/20',weight: 'font-normal' },
+  calm:       { bg: 'bg-[#5DB87F]/10',text: 'text-[#0F3D36]',   accent: 'border-[#5DB87F]',   weight: 'font-normal' },
 };
 
 export const PALETTES: Record<string, { primary: string; secondary: string; surface: string }> = {

@@ -42,8 +42,10 @@ export default function App() {
 
   const navigate = (room: string, mode?: 'aim' | 'hm', fileId?: string) => {
     if (room === "draft" && mode && fileId) {
+      setRoute({ room: "draft", mode, fileId });
       window.location.hash = `draft/${mode}/${fileId}`;
     } else {
+      setRoute({ room });
       window.location.hash = room;
     }
   };

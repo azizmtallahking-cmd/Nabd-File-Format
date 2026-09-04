@@ -57,6 +57,7 @@ export async function extractFile(file: File, onProgress?: (label: string) => vo
   if (format === "pdf") {
     onProgress?.("استخراج النص من PDF محلياً");
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.mjs`;
     const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer(), useWorkerFetch: false }).promise;
     const pages: string[] = [];
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
